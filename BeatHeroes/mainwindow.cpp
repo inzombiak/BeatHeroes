@@ -2,6 +2,7 @@
 #include "GridItem.h"
 #include "LuaWrapper\LuaWrapper.h"
 
+#include <QApplication>
 
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
@@ -17,6 +18,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::GenerateGrid()
 {
+	m_gameState = GameState::Initializing;
 	m_levelManager.LoadLevel("Scripts/Levels/Tutorial.lua");
 	m_columns = m_levelManager.GetColumns();
 	m_rows = m_levelManager.GetRows();
@@ -59,43 +61,25 @@ void MainWindow::GenerateGrid()
 	}
 
 	m_beatSound = new QSound("test.wav", this);
-	m_gameStepTimer = new QTimer(this);
-	m_gameStepTimer->setInterval(m_beatLength);
-	connect(m_gameStepTimer, SIGNAL(timeout()), this, SLOT(Update()));
-	m_gameStepTimer->start();
+
 	m_on = true;
+	m_timer.start();
+	m_lastTime = 0;
+	m_gameState = GameState::Playing;
 }
 
 void MainWindow::AbilityUsed(int row, int column, bool tap, float angle)
 {
-	if (m_gameStepTimer->remainingTime() > m_beatBuffer && m_gameStepTimer->remainingTime() < m_beatLength - m_beatBuffer)
-	{
-		printf("OFF BEAT: %i \n", m_gameStepTimer->remainingTime());
-		return;
-	}
-	
 	m_levelManager.UseAbility(tap, angle);
 }
 
 void MainWindow::RotateHero(float direction)
 {
-	if (m_gameStepTimer->remainingTime() > m_beatBuffer && m_gameStepTimer->remainingTime() < m_beatLength - m_beatBuffer)
-	{
-		printf("OFF BEAT: %i \n", m_gameStepTimer->remainingTime());
-		return;
-	}
-
 	m_levelManager.RotateHero(direction);
 }
 
 void MainWindow::MoveHero(int row, int column, float direction)
 {
-	if (m_gameStepTimer->remainingTime() > m_beatBuffer && m_gameStepTimer->remainingTime() < m_beatLength - m_beatBuffer)
-	{
-		printf("OFF BEAT: %i \n", m_gameStepTimer->remainingTime());
-		return;
-	}
-
 	m_gridItems[row][column]->RemoveHero();
 	QObject::disconnect(m_gridItems[row][column], SIGNAL(AbilityUsedSignal(int, int, bool, float)), this, SLOT(AbilityUsed(int, int, bool, float)));
 	QObject::disconnect(m_gridItems[row][column], SIGNAL(RotateHeroSignal(float)), this, SLOT(RotateHero(float)));
@@ -109,47 +93,53 @@ void MainWindow::MoveHero(int row, int column, float direction)
 	QObject::connect(m_gridItems[newPos.second][newPos.first], SIGNAL(MoveHeroSignal(int, int, float)), this, SLOT(MoveHero(int, int, float)));
 }
 
-void MainWindow::Update()
+void MainWindow::UpdateGame()
 {
-	printf("PreStop: %i \n", m_gameStepTimer->remainingTime());
-
-	//m_gameStepTimer->stop();
-
-	for (int i = 0; i < m_rows; ++i)
-		for (int j = 0; j < m_columns; ++j)
-			m_gridItems[i][j]->Update();
-
-	if (m_on)
+	double newTime =  m_timer.restart();
+	int frames = 0;
+	
+	m_accumulator += newTime;
+	printf("Accumulator: %lf, New time: %lf \n", m_accumulator, newTime);
+	while (m_accumulator >= m_timeStep && frames < m_maxFrames)
 	{
+		for (int i = 0; i < m_rows; ++i)
+			for (int j = 0; j < m_columns; ++j)
+				m_gridItems[i][j]->Update();
+		//printf("Update gridItems: %i \n", m_timer.elapsed());
+
 		m_gridItems[0][0]->setStyleSheet("background-color:yellow;");
-		m_on = false;
 
-		if (!m_mute)
-			m_beatSound->play();
+		auto drawData = m_levelManager.GetDrawingData();
+		QString s;
+		for (int i = 0; i < drawData.size(); ++i)
+		{
+			if (drawData[i].row < 0 || drawData[i].row >= m_rows || drawData[i].column < 0 || drawData[i].column >= m_columns)
+				continue;
+
+			s = QString("background-color:rgb(%1,%2,%3);").arg(drawData[i].R).arg(drawData[i].G).arg(drawData[i].B);
+
+			m_gridItems[drawData[i].row][drawData[i].column]->setStyleSheet(s);
+		}
+		
+		printf("Time Since Beat: %lf, Beat Length: %i \n", m_timeSinceLastBeat, m_beatLength);
+
+		if (m_timeSinceLastBeat >= m_beatLength)
+		{
+			m_levelManager.Update();
+			if (!m_mute)
+				m_beatSound->play();
+			
+			m_timeSinceLastBeat = 0;
+			printf("BEAT \n");
+		}
+			
+		m_accumulator -= m_timeStep;
+		m_timeSinceLastBeat += m_timeStep;
+		frames++;
 	}
-	else
-	{
-		m_on = true;
-		m_gridItems[0][0]->setStyleSheet("background-color:white;");
-	}
 
-	m_levelManager.Update();
-
-	auto drawData = m_levelManager.GetDrawingData();
-	QString s;
-	for (int i = 0; i < drawData.size(); ++i)
-	{
-		if (drawData[i].row < 0 || drawData[i].row >= m_rows || drawData[i].column < 0 || drawData[i].column >= m_columns)
-			continue;
-
-		s = QString("background-color:rgb(%1,%2,%3);").arg(drawData[i].R).arg(drawData[i].G).arg(drawData[i].B);
-
-		m_gridItems[drawData[i].row][drawData[i].column]->setStyleSheet(s);
-	}
-
-	printf("PreStart: %i \n", m_gameStepTimer->remainingTime());
-
-	//m_gameStepTimer->start();
+	m_lastTime = newTime;
+	//m_accumulator = 0;
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
@@ -179,7 +169,6 @@ void MainWindow::Restart()
 	m_gridItems.clear();
 
 	delete m_beatSound;
-	delete m_gameStepTimer;
 
 	GenerateGrid();
 }

@@ -6,5 +6,11 @@ int main(int argc, char *argv[])
 	QApplication a(argc, argv);
 	MainWindow w;
 	w.show();
-	return a.exec();
+	while (w.GetGameState() == GameState::Playing)
+	{
+		a.processEvents();
+		w.UpdateGame();
+	}
+	a.exit();
+	return 0; 
 }

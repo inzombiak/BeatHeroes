@@ -98,8 +98,8 @@ public:
 private:
 	void ProcessUpdate();
 
-	const int m_beatLength = 300;
-	const int m_beatBuffer = 100;
+	const int m_beatLength = 1000;
+	const int m_beatBuffer = 200;
 	int m_rows = -1, m_columns = -1;
 
 	std::string m_levelFilepath;
