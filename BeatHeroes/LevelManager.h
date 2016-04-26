@@ -3,7 +3,6 @@
 #include "TinyXML2\tinyxml2.h"
 
 #include "EnemyManager.h"
-#include "IHero.h"
 #include "GridItem.h"
 
 struct CellData
@@ -13,7 +12,7 @@ struct CellData
 	int R, G, B;
 };
 
-
+class IHero;
 class LevelManager
 {
 public:
@@ -21,7 +20,22 @@ public:
 	~LevelManager();
 	
 	void LoadLevel(const std::string& level);
+	void Update();
+	void Draw(sf::RenderWindow& rw);
+	void Clear();
 
+	void UseAbility(bool isTap, float angle = 0);
+	void RotateHero(float angle) const;
+	void MoveHero(float direction) const;
+
+	int GetBeatPause() const
+	{
+		return m_beatPause;
+	}
+	int GetBeatBuffer() const
+	{
+		return m_beatBuffer;
+	}
 	int GetRows() const
 	{
 		return m_rows;
@@ -34,75 +48,20 @@ public:
 	{
 		return m_hero->GetPos();
 	}
-	AbilityInfo GetAttackPattern(bool isTap, float angle = 0) const
+	IHero* GetHero()
 	{
-		if (isTap)
-			return m_hero->Tap();
-		
-		return m_hero->DoubleTap();
+		return m_hero;
 	}
-
-	void UseAbility(bool isTap, float angle = 0)
-	{
-		if (isTap)
-			m_playerAttackInfo = m_hero->Tap();
-		else
-			m_playerAttackInfo = m_hero->DoubleTap();
-	}
-
-	int GetBeatPause() const
-	{
-		return m_beatPause;
-	}
-	int GetBeatBuffer() const
-	{
-		return m_beatBuffer;
-	}
-
-	void Update()
-	{
-		m_enemyManager.Update();
-		m_hero->Update();
-
-		ProcessUpdate();
-	}
-	
-	void Draw(sf::RenderWindow& rw);
-
 	std::vector<CellData> GetDrawingData() const
 	{
 		return m_drawData;
 	}
-
-	void RotateHero(float angle) const
+	AbilityInfo GetAttackPattern(bool isTap, float angle = 0) const
 	{
-		m_hero->Rotate(angle);
-	}
-	
-	void MoveHero(float direction) const
-	{
-		auto oldPos = m_hero->GetPos();
-		auto newPos = m_hero->Move(direction);
+		if (isTap)
+			return m_hero->Tap();
 
-		if (newPos.first < 0 || newPos.first >= m_columns || newPos.second <= 0 || newPos.second > m_rows)
-		{
-			m_hero->SetPos(oldPos);
-			return;
-		}
-
-		m_gridItems[oldPos.second][oldPos.first]->RemoveHero();
-		m_gridItems[oldPos.second][oldPos.first]->SetColor(sf::Color::White);
-
-		m_gridItems[newPos.second][newPos.first]->AddHero(m_hero);
-		m_gridItems[newPos.second][newPos.first]->SetColor(sf::Color::Green);
-
-	}
-
-	void Clear();
-
-	IHero* GetHero()
-	{
-		return m_hero;
+		return m_hero->DoubleTap();
 	}
 
 private:

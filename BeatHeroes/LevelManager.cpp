@@ -1,4 +1,6 @@
 #include "LevelManager.h"
+#include "IHero.h"
+
 #include "LuaWrapper\LUAWrapper.h"
 
 LevelManager::LevelManager()
@@ -10,22 +12,6 @@ LevelManager::LevelManager()
 LevelManager::~LevelManager()
 {
 	Clear();
-}
-
-void LevelManager::Draw(sf::RenderWindow& rw)
-{
-	for (int i = 0; i < m_rows; ++i)
-		for (int j = 0; j < m_columns; ++j)
-			m_gridItems[i][j]->Draw(rw);
-
-	auto drawData = GetDrawingData();
-	for (int i = 0; i < drawData.size(); ++i)
-	{
-		if (drawData[i].row < 0 || drawData[i].row >= m_rows || drawData[i].column < 0 || drawData[i].column >= m_columns)
-			continue;
-
-		m_gridItems[drawData[i].row][drawData[i].column]->SetColor(sf::Color(drawData[i].R, drawData[i].G, drawData[i].B));
-	}
 }
 
 void LevelManager::LoadLevel(const std::string& level)
@@ -45,7 +31,7 @@ void LevelManager::LoadLevel(const std::string& level)
 
 	int heroY = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetHeroY", "thisLevel");
 	int heroX = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetHeroX", "thisLevel");
-	
+
 	m_hero->SetPos(std::pair<int, int>(heroX, heroY));
 	m_enemyManager.Init("Level", "_enemies", "thisLevel");
 	m_enemyManager.SetWorldBounds(std::pair<int, int>(m_columns, m_rows));
@@ -56,6 +42,32 @@ void LevelManager::LoadLevel(const std::string& level)
 
 	LoadTmx();
 }
+
+void LevelManager::Update()
+{
+	m_enemyManager.Update();
+	m_hero->Update();
+
+	ProcessUpdate();
+}
+
+void LevelManager::Draw(sf::RenderWindow& rw)
+{
+	for (int i = 0; i < m_rows; ++i)
+		for (int j = 0; j < m_columns; ++j)
+			m_gridItems[i][j]->Draw(rw);
+
+	auto drawData = GetDrawingData();
+	for (int i = 0; i < drawData.size(); ++i)
+	{
+		if (drawData[i].row < 0 || drawData[i].row >= m_rows || drawData[i].column < 0 || drawData[i].column >= m_columns)
+			continue;
+
+		m_gridItems[drawData[i].row][drawData[i].column]->DrawCell(sf::Color(drawData[i].R, drawData[i].G, drawData[i].B), rw);
+	}
+}
+
+
 
 void LevelManager::LoadTmx()
 {
@@ -215,4 +227,36 @@ void LevelManager::ProcessUpdate()
 
 	m_playerAttackInfo.damage = 0;
 	m_playerAttackInfo.pattern.clear();
+}
+
+void LevelManager::UseAbility(bool isTap, float angle)
+{
+	if (isTap)
+		m_playerAttackInfo = m_hero->Tap();
+	else
+		m_playerAttackInfo = m_hero->DoubleTap();
+}
+
+void LevelManager::RotateHero(float angle) const
+{
+	m_hero->Rotate(angle);
+}
+
+void LevelManager::MoveHero(float direction) const
+{
+	auto oldPos = m_hero->GetPos();
+	auto newPos = m_hero->Move(direction);
+
+	if (newPos.first < 0 || newPos.first >= m_columns || newPos.second <= 0 || newPos.second > m_rows)
+	{
+		m_hero->SetPos(oldPos);
+		return;
+	}
+
+	m_gridItems[oldPos.second][oldPos.first]->RemoveHero();
+	m_gridItems[oldPos.second][oldPos.first]->SetColor(sf::Color::White);
+
+	m_gridItems[newPos.second][newPos.first]->AddHero(m_hero);
+	m_gridItems[newPos.second][newPos.first]->SetColor(sf::Color::Green);
+
 }

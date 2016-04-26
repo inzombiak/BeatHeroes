@@ -17,6 +17,7 @@ public:
 	}
 
 	void Draw(sf::RenderWindow& rw);
+	void DrawCell(sf::Color color, sf::RenderWindow& rw);
 	void AddHero(IHero* hero)
 	{
 		m_hero = hero;
@@ -29,7 +30,6 @@ public:
 	{
 		m_hero = 0;
 	}
-	
 	void SetColor(sf::Color newColor)
 	{
 		m_cell.setFillColor(newColor);
