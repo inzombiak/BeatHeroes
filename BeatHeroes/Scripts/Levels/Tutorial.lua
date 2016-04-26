@@ -6,8 +6,9 @@ require "Scripts/Enemies/BouncingBomb"
 Tutorial = 
 {
 	_name = "Tutorial",
+	_tmxPath = "Levels/Tutorial.tmx",
 	_rows = 10,
-	_columns = 10,
+	_columns =10,
 	_heroX = 5,
 	_heroY = 5,
 	_enemies = {},

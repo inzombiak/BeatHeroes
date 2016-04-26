@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.0" orientation="orthogonal" renderorder="right-down" width="10" height="10" tilewidth="32" tileheight="32" nextobjectid="1">
- <tileset firstgid="1" name="tiles_packed" tilewidth="32" tileheight="32" tilecount="0" columns="11">
-  <image source="../../../../../Downloads/tiles_packed.png" width="368" height="128"/>
- </tileset>
  <tileset firstgid="1" name="PathAndObjects" tilewidth="32" tileheight="32" tilecount="256" columns="16">
   <image source="../Images/PathAndObjects.png" width="512" height="512"/>
  </tileset>

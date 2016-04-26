@@ -16,7 +16,6 @@ enum GameState
 	Exiting = 2,
 };
 
-class GridItem;
 class Game
 {
 
@@ -58,12 +57,10 @@ private:
 	GameState m_gameState;
 
 	sf::RenderWindow m_renderWindow;
-	int m_windowWidth = 1024;
-	int m_windowHeight = 768;
+	int m_windowWidth = 320;
+	int m_windowHeight = 320;
 
 	int m_rows, m_columns;
-
-	std::vector<std::vector<GridItem*>> m_gridItems;
 
 	sf::Clock m_gameClock;
 	const int m_minTimestep = sf::seconds(1.f / 60.f).asMilliseconds();

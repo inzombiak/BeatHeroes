@@ -1,6 +1,7 @@
 ILevel =
 {
 	_name = "NULL",
+	_tmxPath = "NULL",
 	_rows = -1,
 	_columns = -1,
 	_beatPause = -1,
@@ -17,6 +18,14 @@ function ILevel:Create()
     return b
 end
 
+function ILevel:GetName()
+	return self._name
+end
+
+function ILevel:GetTmxPath()
+	return self._tmxPath
+end
+
 function ILevel:GetRows()
 	return self._rows
 end
@@ -31,10 +40,6 @@ end
 
 function ILevel:GetBeatBuffer()
 	return self._beatBuffer
-end
-
-function ILevel:GetName()
-	return self._name
 end
 
 function ILevel:GetHeroX()
