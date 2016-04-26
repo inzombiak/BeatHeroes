@@ -7,7 +7,7 @@
 class GridItem
 {
 public:
-	GridItem(int x, int y, int w, int h);
+	GridItem(int x, int y, int w, int h, sf::Sprite sprite);
 	~GridItem();
 
 	void Update()

@@ -1,15 +1,15 @@
 #include "GridItem.h"
 #include <SFML\Window.hpp>
 
-GridItem::GridItem(int x, int y, int w, int h)
+GridItem::GridItem(int x, int y, int w, int h, sf::Sprite sprite) : m_sprite(sprite)
 {
 	m_cell.setSize(sf::Vector2f(w, h));
 	m_cell.setPosition(x, y);
 	m_cell.setFillColor(sf::Color::White);
-	m_cell.setOutlineThickness(1);
-	m_cell.setOutlineColor(sf::Color::Black);
+
 	m_directionRect.setSize(sf::Vector2f(w / 5, h / 5));
 	m_directionRect.setFillColor(sf::Color::Magenta);
+	m_sprite.setPosition(x, y);
 }
 
 GridItem::~GridItem()
@@ -28,4 +28,6 @@ void GridItem::Draw(sf::RenderWindow& rw)
 
 		rw.draw(m_directionRect);
 	}
+
+	rw.draw(m_sprite);
 }

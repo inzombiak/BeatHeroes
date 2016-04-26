@@ -2,7 +2,6 @@
 #include <cmath>
 
 #include "Game.h"
-#include "GridItem.h"
 #include "LuaWrapper\LuaWrapper.h"
 
 void Game::Start()
@@ -14,35 +13,9 @@ void Game::Start()
 	m_columns = m_levelManager.GetColumns();
 	m_rows = m_levelManager.GetRows();
 
-	int cellWidth = m_windowWidth / m_columns;
-	int cellHeight = m_windowHeight / m_rows;
-	std::pair<int, int> heroPos = m_levelManager.GetHeroPos();
-
 	m_beatPause = m_levelManager.GetBeatPause();
 	m_beatBuffer = m_levelManager.GetBeatBuffer();
 
-	m_gridItems.resize(m_rows);
-	GridItem* temp;
-
-	double x, y;
-	for (int i = 0; i < m_rows; ++i)
-	{
-		m_gridItems.push_back(std::vector<GridItem*>());
-		m_gridItems[i].resize(m_columns);
-		y = i*cellHeight;
-		for (int j = 0; j < m_columns; ++j)
-		{
-			x = j*cellWidth;
-			temp = new GridItem(x, y, cellWidth, cellHeight);
-			if (i == heroPos.second && j == heroPos.first)
-			{
-				temp->AddHero(m_levelManager.GetHero());
-				temp->SetColor(sf::Color::Green);
-			}
-
-			m_gridItems[i][j] = temp;
-		}
-	}
 	sf::SoundBuffer buffer;
 	buffer.loadFromFile("test.wav");
 	m_beatSound.setBuffer(buffer);
@@ -92,19 +65,11 @@ void Game::MoveHero(int row, int column, float direction)
 	//	printf("OFF BEAT: %i \n", m_timeSinceBeat);
 	//	return;
 	//}
-
-	m_gridItems[row][column]->RemoveHero();
-	m_gridItems[row][column]->SetColor(sf::Color::White);
-	auto newPos = m_levelManager.MoveHero(direction);
-
-	m_gridItems[newPos.second][newPos.first]->AddHero(m_levelManager.GetHero());
-	m_gridItems[newPos.second][newPos.first]->SetColor(sf::Color::Green);
+	m_levelManager.MoveHero(direction);
 }
 
 void Game::Update()
 {
-	printf("Starting Update \n");
-
 	int frames = 0;
 	int time = GetElapsedTime();
 
@@ -120,27 +85,21 @@ void Game::Update()
 
 		frames++;
 	}
-	printf("Finished Events \n");
+
 	if (m_timeSinceBeat >= m_beatPause)
 	{
-		printf("*********Beat, updating grid \n");
-		for (int i = 0; i < m_rows; ++i)
-			for (int j = 0; j < m_columns; ++j)
-				m_gridItems[i][j]->Update();
-		printf("*********Beat Time: %i \n", m_timeSinceBeat);
+
 		m_beatSound.play();
 		m_timeSinceBeat = 0;
 		m_levelManager.Update();
 	}
 
-	printf("End Update \n");
 }
 
 void Game::ProcessEvents()
 {
 	sf::Event event;
 
-	printf("Processing events \n");
 	while (m_renderWindow.pollEvent(event))
 	{
 		if (event.type == sf::Event::Closed)
@@ -153,26 +112,14 @@ void Game::ProcessEvents()
 			MouseReleaseEvent(event);
 		else if (event.type == sf::Event::KeyPressed)
 			KeyPressEvent(event);
-		printf("Processing events in loop \n");
 	}
 }
 
 void Game::Draw()
 {
 	m_renderWindow.clear();
-
-	for (int i = 0; i < m_rows; ++i)
-		for (int j = 0; j < m_columns; ++j)
-			m_gridItems[i][j]->Draw(m_renderWindow);
-
-	auto drawData = m_levelManager.GetDrawingData();
-	for (int i = 0; i < drawData.size(); ++i)
-	{
-		if (drawData[i].row < 0 || drawData[i].row >= m_rows || drawData[i].column < 0 || drawData[i].column >= m_columns)
-			continue;
-
-		m_gridItems[drawData[i].row][drawData[i].column]->SetColor(sf::Color(drawData[i].R, drawData[i].G, drawData[i].B));
-	}
+	
+	m_levelManager.Draw(m_renderWindow);
 
 	m_renderWindow.display();
 }
@@ -181,7 +128,7 @@ void Game::MousePressEvent(const sf::Event& event)
 {
 	glm::vec2 clickPosOnGrid = MapCoordToGrid(event.mouseButton.x, event.mouseButton.y);
 
-	if (m_gridItems[clickPosOnGrid.y][clickPosOnGrid.x]->HasHero() && event.mouseButton.button == sf::Mouse::Left)
+	if (std::pair<int, int>(clickPosOnGrid.x, clickPosOnGrid.y) == m_levelManager.GetHeroPos() && event.mouseButton.button == sf::Mouse::Left)
 	{
 		m_trackMouse = true;
 		m_firstClick = glm::vec2(event.mouseButton.x, event.mouseButton.y);
@@ -276,20 +223,6 @@ double Game::PointDistanceToVec(const glm::vec2& point, const glm::vec2& line)
 
 void Game::Restart()
 {
-	m_levelManager.Clear();
-
-	for (int i = 0; i < m_gridItems.size(); ++i)
-	{
-		for (int j = 0; j < m_gridItems[i].size(); ++j)
-		{
-			delete m_gridItems[i][j];
-			m_gridItems[i][j] = 0;
-		}
-
-		m_gridItems[i].clear();
-	}
-
-	m_gridItems.clear();
-	
+	m_levelManager.Clear();	
 	Start();
 }

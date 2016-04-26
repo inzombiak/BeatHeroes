@@ -1,7 +1,10 @@
 #pragma once
 
+#include "TinyXML2\tinyxml2.h"
+
 #include "EnemyManager.h"
 #include "IHero.h"
+#include "GridItem.h"
 
 struct CellData
 {
@@ -63,6 +66,8 @@ public:
 
 		ProcessUpdate();
 	}
+	
+	void Draw(sf::RenderWindow& rw);
 
 	std::vector<CellData> GetDrawingData() const
 	{
@@ -73,19 +78,24 @@ public:
 	{
 		m_hero->Rotate(angle);
 	}
-
-	std::pair<int, int> MoveHero(float direction) const
+	
+	void MoveHero(float direction) const
 	{
-		auto result = m_hero->GetPos();
-
+		auto oldPos = m_hero->GetPos();
 		auto newPos = m_hero->Move(direction);
 
 		if (newPos.first < 0 || newPos.first >= m_columns || newPos.second <= 0 || newPos.second > m_rows)
-			m_hero->SetPos(result);
-		else
-			result = newPos;
+		{
+			m_hero->SetPos(oldPos);
+			return;
+		}
 
-		return result;
+		m_gridItems[oldPos.second][oldPos.first]->RemoveHero();
+		m_gridItems[oldPos.second][oldPos.first]->SetColor(sf::Color::White);
+
+		m_gridItems[newPos.second][newPos.first]->AddHero(m_hero);
+		m_gridItems[newPos.second][newPos.first]->SetColor(sf::Color::Green);
+
 	}
 
 	void Clear();
@@ -96,12 +106,20 @@ public:
 	}
 
 private:
-	void ProcessUpdate();
+	tinyxml2::XMLDocument m_xmlDoc;
+	void LoadTmx();
+	sf::Sprite CreateGridSprite(int tileIndex, int worldIndex);
+	int m_textureWidth = -1, m_textureHeight = -1;
+	sf::Texture m_levelTileSet;
 
+	void ProcessUpdate();
+	std::string m_tmxPath;
 	int m_beatPause = 0;
 	int m_beatBuffer = 0;
 	int m_rows = -1, m_columns = -1;
+	int m_tileHeight = -1, m_tileWidth = -1;
 
+	std::vector<std::vector<GridItem*>> m_gridItems;
 	std::string m_levelFilepath;
 	IHero* m_hero;
 	EnemyManager m_enemyManager;
