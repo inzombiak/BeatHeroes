@@ -19,11 +19,11 @@ public:
 	std::pair<int, int> GetCooldowns() const;
 	std::pair<int, int> GetBeatsPassed() const;
 	void Update();
-	void Rotate(double angle)
+	void Rotate(float angle)
 	{
 		m_direction += angle;
 	}
-	double GetDirection()
+	float GetDirection()
 	{
 		return m_direction;
 	}
@@ -32,7 +32,7 @@ public:
 		m_pos = newPos;
 	}
 
-	std::pair<int, int> Move(double direction);
+	std::pair<int, int> Move(float direction);
 	const std::pair<int, int>& GetPos() const
 	{
 		return m_pos;
@@ -41,7 +41,7 @@ public:
 protected:
 	IAbility* m_sglClickAb;
 	IAbility* m_dblClickAb;
-	double m_direction = 0;
+	float m_direction = 0;
 	unsigned int m_id;
 	std::pair<int, int> m_pos;
 	std::string m_filePath;

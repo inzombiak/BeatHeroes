@@ -47,9 +47,9 @@ public:
 			m_playerAttackInfo = m_hero->DoubleTap();
 	}
 
-	int GetBeatPause() const
+	int GetBeatLength() const
 	{
-		return m_beatPause;
+		return m_beatLength;
 	}
 	int GetBeatBuffer() const
 	{
@@ -98,8 +98,8 @@ public:
 private:
 	void ProcessUpdate();
 
-	int m_beatPause = 0;
-	int m_beatBuffer = 0;
+	const int m_beatLength = 300;
+	const int m_beatBuffer = 100;
 	int m_rows = -1, m_columns = -1;
 
 	std::string m_levelFilepath;
@@ -108,3 +108,4 @@ private:
 	AbilityInfo m_playerAttackInfo;
 	std::vector<CellData> m_drawData;
 };
+
