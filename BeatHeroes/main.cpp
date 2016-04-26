@@ -1,10 +1,8 @@
-#include "mainwindow.h"
-#include <QtWidgets/QApplication>
+#include "Game.h"
 
 int main(int argc, char *argv[])
 {
-	QApplication a(argc, argv);
-	MainWindow w;
-	w.show();
-	return a.exec();
+	Game g;
+	g.Start();
+	return 0;
 }

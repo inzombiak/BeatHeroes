@@ -3,8 +3,6 @@ ILevel =
 	_name = "NULL",
 	_rows = -1,
 	_columns = -1,
-	_beatPause = -1,
-	_beatBuffer = -1,
 	_heroX = -1,
 	_heroY = -1,
 	_enemies = {}
@@ -23,14 +21,6 @@ end
 
 function ILevel:GetColumns()
 	return self._columns
-end
-
-function ILevel:GetBeatPause()
-	return self._beatPause
-end
-
-function ILevel:GetBeatBuffer()
-	return self._beatBuffer
 end
 
 function ILevel:GetName()

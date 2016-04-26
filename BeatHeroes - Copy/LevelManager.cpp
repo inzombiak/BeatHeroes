@@ -38,9 +38,6 @@ void LevelManager::LoadLevel(const std::string& level)
 	m_hero->SetPos(std::pair<int, int>(heroX, heroY));
 	m_enemyManager.Init("Level", "_enemies", "thisLevel");
 	m_enemyManager.SetWorldBounds(std::pair<int, int>(m_columns, m_rows));
-
-	m_beatPause = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetBeatPause", "thisLevel");
-	m_beatBuffer = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetBeatBuffer", "thisLevel");
 }
 
 void LevelManager::Clear()
@@ -58,7 +55,12 @@ void LevelManager::ProcessUpdate()
 	CellData cellD;
 	auto enemyD = m_enemyManager.GetEnemyData();
 	auto heroPos = m_hero->GetPos();
-
+	cellD.row = heroPos.second; 
+	cellD.column = heroPos.first;
+	cellD.R = 0;
+	cellD.G = 0;
+	cellD.B = 255;
+	m_drawData.push_back(cellD);
 
 	for (unsigned int j = 0; j < m_playerAttackInfo.pattern.size(); ++j)
 	{

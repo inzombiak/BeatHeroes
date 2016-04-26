@@ -54,18 +54,18 @@ AbilityInfo IHero::Tap()
 
 	m_sglClickAb->Use(result.pattern);
 
-	double angleSin = std::sin(m_direction);
-	double angleCos = std::cos(m_direction);
+	float angleSin = std::sin(m_direction);
+	float angleCos = std::cos(m_direction);
 
 	if (std::abs(angleCos) < 0.001)
 		angleCos = 0;
 	if (std::abs(angleSin) < 0.001)
 		angleSin = 0;
 
-	for (unsigned int i = 0; i < result.pattern.size(); ++i)
+	for (int i = 0; i < result.pattern.size(); ++i)
 	{
-		int posX = int(result.pattern[i].first * angleCos - result.pattern[i].second * angleSin);
-		int posY = int(result.pattern[i].first * angleSin + result.pattern[i].second * angleCos);
+		int posX = (result.pattern[i].first * angleCos - result.pattern[i].second * angleSin);
+		int posY = (result.pattern[i].first * angleSin + result.pattern[i].second * angleCos);
 		result.pattern[i] = std::pair<int, int>(posX, posY);
 	}
 
@@ -80,18 +80,18 @@ AbilityInfo IHero::DoubleTap()
 
 	m_dblClickAb->Use(result.pattern);
 
-	double angleSin = std::sin(m_direction);
-	double angleCos = std::cos(m_direction);
+	float angleSin = std::sin(m_direction);
+	float angleCos = std::cos(m_direction);
 
 	if (std::abs(angleCos) < 0.001)
 		angleCos = 0;
 	if (std::abs(angleSin) < 0.001)
 		angleSin = 0;
 
-	for (unsigned int i = 0; i < result.pattern.size(); ++i)
+	for (int i = 0; i < result.pattern.size(); ++i)
 	{
-		int posX = int(result.pattern[i].first * angleCos - result.pattern[i].second * angleSin);
-		int posY = int(result.pattern[i].first * angleSin + result.pattern[i].second * angleCos);
+		int posX = (result.pattern[i].first * angleCos - result.pattern[i].second * angleSin);
+		int posY = (result.pattern[i].first * angleSin + result.pattern[i].second * angleCos);
 		result.pattern[i] = std::pair<int, int>(posX, posY);
 	}
 
@@ -100,14 +100,14 @@ AbilityInfo IHero::DoubleTap()
 	return result;
 }
 
-std::pair<int, int> IHero::Move(double direction)
+std::pair<int, int> IHero::Move(float direction)
 {
-	double clampedAngle = std::round(direction / M_PI_2) * M_PI_2;
-	if (clampedAngle >= 2*M_PI)
+	float clampedAngle = std::round(direction / M_PI_2) * M_PI_2;
+	if (clampedAngle >= 2*M_PI);
 		clampedAngle -= 2*M_PI;
 
-	int cos = int (std::cos(clampedAngle));
-	int sin = int (std::sin(clampedAngle));
+	int cos = std::cos(clampedAngle);
+	int sin = std::sin(clampedAngle);
 
 	m_pos.first += cos;
 	m_pos.second += sin;
