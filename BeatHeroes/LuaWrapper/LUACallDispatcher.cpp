@@ -15,13 +15,13 @@ LuaCallDispatcher::~LuaCallDispatcher()
 template<>
 int LuaCallDispatcher::Read(lua_State* L, int index) const
 {
-	return lua_tointeger(L, index);
+	return (int)lua_tointeger(L, index);
 }
 
 template<>
 float LuaCallDispatcher::Read(lua_State* L, int index) const
 {
-	return lua_tonumber(L, index);
+	return (float)lua_tonumber(L, index);
 }
 
 template<>
@@ -33,7 +33,7 @@ double LuaCallDispatcher::Read(lua_State* L, int index) const
 template<>
 bool LuaCallDispatcher::Read(lua_State* L, int index) const
 {
-	return lua_toboolean(L, index);
+	return lua_toboolean(L, index) != 0;
 }
 
 template<>

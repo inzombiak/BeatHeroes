@@ -261,7 +261,7 @@ public:
 	{
 		std::vector<std::pair<Ret1, Ret2>> result;
 		lua_getfield(L, -1, tableName.c_str());
-		int size = luaL_len(L, -1);
+		int size = (int)luaL_len(L, -1);
 		lua_pushnil(L);
 		std::pair<Ret1, Ret2> p;
 		for (int i = 1; i <= size; ++i)
@@ -286,7 +286,7 @@ public:
 	std::vector<std::pair<Ret1, Ret2>> TableToVectorFromTop(lua_State* L)
 	{
 		std::vector<std::pair<Ret1, Ret2>> result;
-		int size = luaL_len(L, -1);
+		int size = (int)luaL_len(L, -1);
 		lua_pushnil(L);
 		std::pair<Ret1, Ret2> p;
 

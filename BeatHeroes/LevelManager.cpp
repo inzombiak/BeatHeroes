@@ -36,11 +36,17 @@ void LevelManager::LoadLevel(const std::string& level)
 	m_enemyManager.Init("Level", "_enemies", "thisLevel");
 	m_enemyManager.SetWorldBounds(std::pair<int, int>(m_columns, m_rows));
 
-	m_beatPause = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetBeatPause", "thisLevel");
-	m_beatBuffer = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetBeatBuffer", "thisLevel");
+	m_beatPause = LuaWrapper::GetInstance().RunFunction<double>("Level", "GetBeatPause", "thisLevel");
+	m_beatBuffer = LuaWrapper::GetInstance().RunFunction<double>("Level", "GetBeatBuffer", "thisLevel");
 	m_tmxPath = LuaWrapper::GetInstance().RunFunction<std::string>("Level", "GetTmxPath", "thisLevel");
 
 	LoadTmx();
+}
+
+void LevelManager::UpdateRender()
+{
+	m_hero->UpdateRender(); 
+	m_enemyManager.UpdateRender();
 }
 
 void LevelManager::Update()
@@ -58,13 +64,16 @@ void LevelManager::Draw(sf::RenderWindow& rw)
 			m_gridItems[i][j]->Draw(rw);
 
 	auto drawData = GetDrawingData();
-	for (int i = 0; i < drawData.size(); ++i)
+	for (unsigned int i = 0; i < drawData.size(); ++i)
 	{
 		if (drawData[i].row < 0 || drawData[i].row >= m_rows || drawData[i].column < 0 || drawData[i].column >= m_columns)
 			continue;
 
 		m_gridItems[drawData[i].row][drawData[i].column]->DrawCell(sf::Color(drawData[i].R, drawData[i].G, drawData[i].B), rw);
 	}
+
+	m_hero->Draw(rw);
+	m_enemyManager.Draw(rw);
 }
 
 
@@ -100,7 +109,7 @@ void LevelManager::LoadTmx()
 	m_gridItems.resize(m_rows);
 	GridItem* temp;
 	sf::Sprite gridSprite;
-	double x, y;
+	int x, y;
 	for (int i = 0; i < m_rows; ++i)
 	{
 		m_gridItems.push_back(std::vector<GridItem*>());
@@ -130,11 +139,8 @@ void LevelManager::LoadTmx()
 sf::Sprite LevelManager::CreateGridSprite(int tileIndex, int worldIndex)
 {
 	sf::Sprite sprite;
-	
-	int layer;
-
-	int textureI = std::floor((tileIndex - 1) / (m_textureWidth / m_tileWidth));
-	int textureJ = (tileIndex - 1) % (m_textureHeight / m_tileHeight);
+	int textureI = (int)std::floor((tileIndex - 1) / (m_textureWidth / m_tileWidth));
+	int textureJ = (int)(tileIndex - 1) % (m_textureHeight / m_tileHeight);
 
 	sf::IntRect subRect;
 	int ty = textureJ*m_tileHeight;
@@ -151,9 +157,9 @@ sf::Sprite LevelManager::CreateGridSprite(int tileIndex, int worldIndex)
 
 void LevelManager::Clear()
 {
-	for (int i = 0; i < m_gridItems.size(); ++i)
+	for (unsigned int i = 0; i < m_gridItems.size(); ++i)
 	{
-		for (int j = 0; j < m_gridItems[i].size(); ++j)
+		for (unsigned int j = 0; j < m_gridItems[i].size(); ++j)
 		{
 			delete m_gridItems[i][j];
 			m_gridItems[i][j] = 0;
@@ -229,7 +235,7 @@ void LevelManager::ProcessUpdate()
 	m_playerAttackInfo.pattern.clear();
 }
 
-void LevelManager::UseAbility(bool isTap, float angle)
+void LevelManager::UseAbility(bool isTap, double angle)
 {
 	if (isTap)
 		m_playerAttackInfo = m_hero->Tap();
@@ -237,12 +243,12 @@ void LevelManager::UseAbility(bool isTap, float angle)
 		m_playerAttackInfo = m_hero->DoubleTap();
 }
 
-void LevelManager::RotateHero(float angle) const
+void LevelManager::RotateHero(double angle) const
 {
 	m_hero->Rotate(angle);
 }
 
-void LevelManager::MoveHero(float direction) const
+void LevelManager::MoveHero(double direction) const
 {
 	auto oldPos = m_hero->GetPos();
 	auto newPos = m_hero->Move(direction);

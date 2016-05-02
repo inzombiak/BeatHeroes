@@ -26,18 +26,13 @@ end
 function FireSpinner:Init()
 	self._attackPattern[1] = {1, 0}
 	self._attackPattern[2] = {2, 0}
-	self._attackPattern[3] = {3, 0}
-	self._attackPattern[4] = {4, 0}
+	
+	self._animPath = "Images/Enemies/FireSpinner/FireSpinner_Anim.anim"
+	self._currAnimName = "right"
 end
 
-
-function FireSpinner:Update()
-	local newDir = self._direction + math.pi/2
-	self._direction = newDir
-
-	if(self._direction >= 2*math.pi) then
-		self._direction = self._direction - 2*math.pi
-	end
+function FireSpinner:GetAttackPattern()
+	local result = {}
 	
 	local dirSin = math.sin(self._direction)
 	local dirCos = math.cos(self._direction)
@@ -48,11 +43,35 @@ function FireSpinner:Update()
 	if(math.abs(dirCos) < 0.00001) then
 		dirCos = 0
 	end
-
+	dirSin = dirSin * -1
 	for i = 1, #self._attackPattern do
-		local apY = self._attackPattern[i][1] * dirCos - self._attackPattern[i][2] * dirSin
-		local apX = self._attackPattern[i][1] * dirSin + self._attackPattern[i][2] * dirCos
-		self._attackPattern[i][1] = apX 
-		self._attackPattern[i][2] = apY
+		local apX = self._attackPattern[i][1] * dirCos - self._attackPattern[i][2] * dirSin
+		local apY = self._attackPattern[i][1] * dirSin + self._attackPattern[i][2] * dirCos
+		result[i] = {apX, apY}
 	end
+	
+	return result
+	
+end
+
+function FireSpinner:Update()
+	
+	self._direction = self._direction + math.pi/2
+
+	if(self._direction >= 2*math.pi) then
+		self._direction = self._direction - 2*math.pi
+	end
+	
+	if(self._direction == 0) then
+		self._currAnimName = "right"
+	elseif(self._direction == math.pi/2) then
+		self._currAnimName = "up"
+	elseif(self._direction == math.pi) then
+		self._currAnimName = "left"
+	elseif(self._direction == 1.5 * math.pi) then
+		self._currAnimName = "down"
+	else 
+		self._currAnimName = "down"
+	end
+	
 end

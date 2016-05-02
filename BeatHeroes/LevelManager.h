@@ -21,18 +21,19 @@ public:
 	
 	void LoadLevel(const std::string& level);
 	void Update();
+	void UpdateRender();
 	void Draw(sf::RenderWindow& rw);
 	void Clear();
 
-	void UseAbility(bool isTap, float angle = 0);
-	void RotateHero(float angle) const;
-	void MoveHero(float direction) const;
+	void UseAbility(bool isTap, double angle = 0);
+	void RotateHero(double angle) const;
+	void MoveHero(double direction) const;
 
-	int GetBeatPause() const
+	double GetBeatPause() const
 	{
 		return m_beatPause;
 	}
-	int GetBeatBuffer() const
+	double GetBeatBuffer() const
 	{
 		return m_beatBuffer;
 	}
@@ -73,8 +74,8 @@ private:
 
 	void ProcessUpdate();
 	std::string m_tmxPath;
-	int m_beatPause = 0;
-	int m_beatBuffer = 0;
+	double m_beatPause = 0;
+	double m_beatBuffer = 0;
 	int m_rows = -1, m_columns = -1;
 	int m_tileHeight = -1, m_tileWidth = -1;
 

@@ -15,7 +15,7 @@ std::vector<std::shared_ptr<LuaObject>> LuaEnvironment::TableToVector(lua_State*
 	std::vector<std::shared_ptr<LuaObject>> result;
 	lua_getfield(L, -1, tableName.c_str());
 
-	int size = luaL_len(L, -1);
+	int size = (int)luaL_len(L, -1);
 
 	lua_settop(L, -1);
 

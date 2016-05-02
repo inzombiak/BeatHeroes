@@ -35,7 +35,7 @@ template<>
 int detail::GetAndCheckType(lua_State* L, int i)
 {
 	int isInt = 0;
-	int result = lua_tointegerx(L, i, &isInt);
+	int result = (int)lua_tointegerx(L, i, &isInt);
 
 	if (!isInt)
 	{

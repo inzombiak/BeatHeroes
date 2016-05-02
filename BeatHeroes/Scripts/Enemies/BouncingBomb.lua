@@ -25,6 +25,8 @@ end
 
 function BouncingBomb:Init()
 	self:SetPattern()
+	self._animPath = "Images/Enemies/BouncingBomb/BouncingBomb_Anim.anim"
+	self._currAnimName = "idle"
 end
 
 function BouncingBomb:SetPattern()
@@ -54,9 +56,11 @@ function BouncingBomb:Update()
 		self._posX = self._posX + math.ceil(2*math.cos(self._direction))
 		self._posY = self._posY + math.ceil(2*math.sin(self._direction))
 		self._move = 0;
+		self._currAnimName = "idle"
 	else
 		self:SetPattern()
 		self._move = 1;
+		self._currAnimName = "explode"
 	end
 	--[[]]--
 end

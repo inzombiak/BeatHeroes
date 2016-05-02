@@ -4,6 +4,17 @@
 #include "Game.h"
 #include "LuaWrapper\LuaWrapper.h"
 
+Game::~Game()
+{
+	Destroy();
+}
+
+void Game::Destroy()
+{
+	m_levelManager.Clear();
+	m_beatSound.resetBuffer();
+}
+
 void Game::Start()
 {
 	m_gameState = GameState::Initializing;
@@ -22,7 +33,7 @@ void Game::Start()
 
 	m_gameClock.restart();
 	m_on = true;
-
+	m_testClock.restart();
 	m_gameState = GameState::Playing;
 	while (m_gameState != GameState::Exiting)
 	{
@@ -31,12 +42,12 @@ void Game::Start()
 	}
 }
 
-int Game::GetElapsedTime()
+double Game::GetElapsedTime()
 {
-	return m_gameClock.restart().asMilliseconds();
+	return m_gameClock.restart().asSeconds();
 }
 
-void Game::AbilityUsed(int row, int column, bool tap, float angle)
+void Game::AbilityUsed(int row, int column, bool tap, double angle)
 {
 	//if (m_timeSinceBeat > m_beatBuffer && m_timeSinceBeat < m_beatLength - m_beatBuffer)
 	//{
@@ -47,7 +58,7 @@ void Game::AbilityUsed(int row, int column, bool tap, float angle)
 	m_levelManager.UseAbility(tap, angle);
 }
 
-void Game::RotateHero(float direction)
+void Game::RotateHero(double direction)
 {
 	//if (m_timeSinceBeat > m_beatBuffer && m_timeSinceBeat < m_beatLength - m_beatBuffer)
 	//{
@@ -58,7 +69,7 @@ void Game::RotateHero(float direction)
 	m_levelManager.RotateHero(direction);
 }
 
-void Game::MoveHero(int row, int column, float direction)
+void Game::MoveHero(int row, int column, double direction)
 {
 	//if (m_timeSinceBeat > m_beatBuffer && m_timeSinceBeat < m_beatLength - m_beatBuffer)
 	//{
@@ -71,11 +82,10 @@ void Game::MoveHero(int row, int column, float direction)
 void Game::Update()
 {
 	int frames = 0;
-	int time = GetElapsedTime();
+	double time = GetElapsedTime();
 
 	m_remainingTime += time;
 	m_timeSinceBeat += time;
-
 	while ((m_remainingTime > m_minTimestep) && (frames < m_maxFrames))
 	{
 
@@ -84,16 +94,21 @@ void Game::Update()
 		m_remainingTime -= m_minTimestep;
 
 		frames++;
-	}
 
+		if (m_gameState == GameState::Paused)
+			continue;
+
+		m_levelManager.UpdateRender();
+	}
+	if (m_gameState == GameState::Paused)
+		return;
 	if (m_timeSinceBeat >= m_beatPause)
 	{
-
-		m_beatSound.play();
+		if (!m_mute)
+			m_beatSound.play();
 		m_timeSinceBeat = 0;
 		m_levelManager.Update();
 	}
-
 }
 
 void Game::ProcessEvents()
@@ -117,6 +132,9 @@ void Game::ProcessEvents()
 
 void Game::Draw()
 {
+	if (m_gameState == GameState::Paused)
+		return;
+
 	m_renderWindow.clear();
 	
 	m_levelManager.Draw(m_renderWindow);
@@ -128,7 +146,7 @@ void Game::MousePressEvent(const sf::Event& event)
 {
 	glm::vec2 clickPosOnGrid = MapCoordToGrid(event.mouseButton.x, event.mouseButton.y);
 
-	if (std::pair<int, int>(clickPosOnGrid.x, clickPosOnGrid.y) == m_levelManager.GetHeroPos() && event.mouseButton.button == sf::Mouse::Left)
+	if (std::pair<int, int>((int)clickPosOnGrid.x, (int)clickPosOnGrid.y) == m_levelManager.GetHeroPos() && event.mouseButton.button == sf::Mouse::Left)
 	{
 		m_trackMouse = true;
 		m_firstClick = glm::vec2(event.mouseButton.x, event.mouseButton.y);
@@ -149,25 +167,25 @@ void Game::MouseReleaseEvent(const sf::Event& event)
 	if (event.mouseButton.button == sf::Mouse::Left)
 	{
 		if (m_mousePositions.size() <= 3)
-			AbilityUsed(clickPos.y, clickPos.x, true, 0);
+			AbilityUsed((int)clickPos.y, (int)clickPos.x, true, 0);
 		else
 		{
 			glm::vec2 finalVec(glm::vec2(event.mouseButton.x, event.mouseButton.y) - m_firstClick);
 			glm::vec2 finalVecNorm = glm::normalize(finalVec);
-			float averageDistance = 0;
+			double averageDistance = 0;
 
-			for (int i = 0; i < m_mousePositions.size(); ++i)
+			for (unsigned int i = 0; i < m_mousePositions.size(); ++i)
 				averageDistance += PointDistanceToVec(m_mousePositions[i], finalVec);
 			averageDistance /= m_mousePositions.size();
 
 			if (averageDistance <= 5)
 			{
-				float angle = std::atan2(finalVec.y, finalVec.x);
+				double angle = std::atan2(finalVec.y, finalVec.x);
 
 				if (angle < 0)
 					angle += 2 * M_PI;
 
-				MoveHero(clickPos.y, clickPos.x, angle);
+				MoveHero((int)clickPos.y, (int)clickPos.x, angle);
 			}
 			else
 			{
@@ -187,7 +205,7 @@ void Game::MouseReleaseEvent(const sf::Event& event)
 	}
 	else if (event.mouseButton.button == sf::Mouse::Right)
 		if (m_mousePositions.size() <= 3)
-			AbilityUsed(clickPos.y, clickPos.x, false, 0);
+			AbilityUsed((int)clickPos.y, (int)clickPos.x, false, 0);
 
 	m_mousePositions.clear();
 	m_trackMouse = false;
@@ -200,14 +218,22 @@ void Game::KeyPressEvent(const sf::Event& event)
 
 	if (event.key.code == sf::Keyboard::R)
 		Restart();
+
+	if (event.key.code == sf::Keyboard::P)
+	{
+		if (m_gameState == GameState::Playing)
+			m_gameState = GameState::Paused;
+		else
+			m_gameState = GameState::Playing;
+	}
 }
 
 glm::vec2 Game::MapCoordToGrid(double x, double y)
 {
 	glm::vec2 result;
 
-	result.x = std::floor(x / (m_windowWidth / m_columns));
-	result.y = std::floor(y / (m_windowHeight / m_rows));
+	result.x = (float)std::floor(x / (m_windowWidth / m_columns));
+	result.y = (float)std::floor(y / (m_windowHeight / m_rows));
 
 	return result;
 }

@@ -13,23 +13,17 @@ enum GameState
 {
 	Initializing = 0,
 	Playing = 1,
-	Exiting = 2,
+	Paused = 2,
+	Exiting = 3,
 };
 
 class Game
 {
 
 public:
+	~Game();
 	void Start();
 
-
-//public slots:
-//	void AbilityUsed(int row, int column, bool tap, float angle);
-//	void RotateHero(float direction);
-//	void MoveHero(int row, int column, float direction);
-//	void Update();
-//	void Beat();
-//
 
 private:
 
@@ -38,7 +32,7 @@ private:
 	void Update();
 	void ProcessEvents(); 
 	void Draw();
-	int GetElapsedTime();
+	double GetElapsedTime();
 
 	void MousePressEvent(const sf::Event& event);
 	void MouseMoveEvent(const sf::Event&event);
@@ -47,9 +41,9 @@ private:
 	glm::vec2 MapCoordToGrid(double x, double y);
 	double PointDistanceToVec(const glm::vec2& point, const glm::vec2& line);
 
-	void AbilityUsed(int row, int column, bool tap, float angle);
-	void RotateHero(float direction);
-	void MoveHero(int row, int column, float direction);
+	void AbilityUsed(int row, int column, bool tap, double angle);
+	void RotateHero(double direction);
+	void MoveHero(int row, int column, double direction);
 
 	bool m_trackMouse;
 	glm::vec2 m_firstClick;
@@ -63,14 +57,15 @@ private:
 	int m_rows, m_columns;
 
 	sf::Clock m_gameClock;
-	const int m_minTimestep = sf::seconds(1.f / 60.f).asMilliseconds();
+	sf::Clock m_testClock;
+	const double m_minTimestep = sf::seconds(1.f / 60.f).asSeconds();
 	const int m_maxFrames = 5;
-	int m_remainingTime = 0;
-	int m_timeSinceBeat = 0;
+	double  m_remainingTime = 0;
+	double m_timeSinceBeat = 0;
 
 	sf::Sound m_beatSound;
-	int m_beatPause= -1;
-	int m_beatBuffer = -1;
+	double m_beatPause= -1;
+	double m_beatBuffer = -1;
 	bool m_on;
 	bool m_mute = true;
 

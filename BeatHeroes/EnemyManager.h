@@ -1,6 +1,6 @@
 #pragma once
-#include "Enemy.h"
 
+#include "Enemy.h"
 #include <vector>
 #include <queue>
 
@@ -13,6 +13,7 @@ struct EnemyData
 	unsigned int index;
 };
 
+class LuaObject;
 class EnemyManager
 {
 public:
@@ -21,6 +22,9 @@ public:
 
 	void Init(const std::string& envName, const std::string& tableName, const std::string& globalName = "");
 	void Update();
+	void UpdateRender();
+	void Draw(sf::RenderWindow& rw);
+
 	std::vector<EnemyData> GetEnemyData();
 
 	void Clear()
@@ -37,9 +41,13 @@ public:
 	void SetEnemyHP(unsigned int index, int amount);
 
 private:
+	void LoadSpritesheet(std::shared_ptr<LuaObject> enemyPtr);
+
 	std::pair<int, int> m_bounds;
 	void KillEnemy(unsigned int index);
 	std::vector<Enemy> m_enemies;
 	std::queue<unsigned int> m_unusedEnemyIndicies;
+
+	sf::Texture m_enemySpriteSheet;
 };
 

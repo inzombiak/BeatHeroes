@@ -7,7 +7,10 @@ IEnemy =
 	_posX = -1,
 	_posY = -1,
 	_attackPattern = {},
-	_color = {}
+	_color = {},
+	_currAnimName = "NULL",
+	_animPath = "NULL"
+	
 }
 
 function IEnemy:Create(newID)
@@ -75,4 +78,12 @@ end
 
 function IEnemy:Kill()
 	print("EMPTY ENEMY")
+end
+
+function IEnemy:GetCurrentAnimationName()
+	return self._currAnimName
+end
+
+function IEnemy:GetAnimationPath()
+	return self._animPath
 end

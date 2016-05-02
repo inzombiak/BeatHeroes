@@ -4,6 +4,8 @@
 #include <SFML/Graphics.hpp>
 #include "IHero.h"
 
+
+
 class GridItem
 {
 public:
@@ -13,7 +15,7 @@ public:
 	void Update()
 	{
 		if (!m_hero)
-			m_cell.setFillColor(sf::Color::White);
+			m_cell.setFillColor(sf::Color::Transparent);
 	}
 
 	void Draw(sf::RenderWindow& rw);
@@ -32,14 +34,14 @@ public:
 	}
 	void SetColor(sf::Color newColor)
 	{
-		m_cell.setFillColor(newColor);
+		m_cell.setOutlineColor(newColor);
 	}
 
 private:
+	
 	sf::Vector2i m_click;
 
 	IHero* m_hero = 0;
-	sf::RectangleShape m_directionRect;
 	sf::RectangleShape m_cell;
 	sf::Sprite m_sprite;
 };

@@ -1,9 +1,13 @@
 #define _USE_MATH_DEFINES
 #include <cmath> 
+#include <iostream>
+
 #include "IHero.h"
 #include "IAbility.h"
 
 #include "LuaWrapper\LuaWrapper.h"
+#include "TinyXML2\tinyxml2.h"
+
 
 IHero::IHero(unsigned int id, std::string filepath)
 {
@@ -11,8 +15,15 @@ IHero::IHero(unsigned int id, std::string filepath)
 	m_filePath = filepath;
 	
 	LuaWrapper::GetInstance().LoadScript(filepath + std::to_string(id), m_filePath);
-	m_sglClickAb = new IAbility(1, LuaWrapper::GetInstance().GetGlobalValue<std::string>(filepath + std::to_string(id), "singleClick"));
-	m_dblClickAb = new IAbility(2, LuaWrapper::GetInstance().GetGlobalValue<std::string>(filepath + std::to_string(id), "doubleClick"));
+	m_sglClickAb = new IAbility(1, LuaWrapper::GetInstance().RunFunction<std::string>(filepath + std::to_string(id), "GetSglClickPath", "hero"));
+	m_dblClickAb = new IAbility(2, LuaWrapper::GetInstance().RunFunction<std::string>(filepath + std::to_string(id), "GetDblClickPath", "hero"));
+
+	LoadSpriteSheet();
+	LoadAnimationFile();
+
+	m_sprite.setTexture(m_spriteSheet);
+	UpdateAnimation();
+	m_sprite.setPosition((float)m_pos.first*32, (float)m_pos.second*32);
 }
 
 
@@ -46,6 +57,25 @@ void IHero::Update()
 {
 	m_sglClickAb->Update();
 	m_dblClickAb->Update();
+}
+
+void IHero::UpdateRender()
+{
+	m_counter++;
+	if (m_counter >= m_maxCounter)
+	{
+		m_currentAnimation.NextFrame();
+
+		Animation::Frame currentFrame = m_currentAnimation.frames[m_currentAnimation.GetCurrentFrameIndex()];
+		sf::IntRect currentBounds = m_spriteDefinitions[currentFrame.sprites[0].spriteDir].spriteBounds[currentFrame.sprites[0].spriteName];
+		m_sprite.setTextureRect(currentBounds);
+		m_counter = 0;
+	}
+}
+
+void IHero::Draw(sf::RenderWindow& rw)
+{
+	rw.draw(m_sprite);
 }
 
 AbilityInfo IHero::Tap()
@@ -113,6 +143,156 @@ std::pair<int, int> IHero::Move(double direction)
 	m_pos.second += sin;
 
 	m_direction = clampedAngle;
+	m_sprite.setPosition((float)m_pos.first * 32, (float)m_pos.second * 32);
+
+	UpdateAnimation();
 
 	return m_pos;
+}
+
+void IHero::Rotate(double angle)
+{
+	m_direction = std::round((m_direction + angle) / M_PI_2) * M_PI_2;
+	if (m_direction >= 2 * M_PI)
+		m_direction -= 2 * M_PI;
+	UpdateAnimation();
+}
+
+void IHero::LoadSpriteSheet()
+{
+
+	std::string filename = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetSpritesheetPath", "hero");
+
+	tinyxml2::XMLDocument spriteFile;
+	if (spriteFile.LoadFile(filename.c_str()) != tinyxml2::XMLError::XML_SUCCESS)
+		std::cout << "ERROR LOADING" << filename << std::endl;
+
+	tinyxml2::XMLElement* pImg = spriteFile.FirstChildElement("img");
+	std::string textureName = pImg->Attribute("name");
+	m_spriteSheet.loadFromFile("Images/Entities/Hero/" + textureName);
+	tinyxml2::XMLElement* pDefs = pImg->FirstChildElement("definitions");
+	tinyxml2::XMLElement* pBaseDir = pDefs->FirstChildElement("dir");
+	tinyxml2::XMLElement* pDir = pBaseDir->FirstChildElement("dir");
+	tinyxml2::XMLElement* pSprite;
+	sf::IntRect spriteBounds;
+	Animation::SpriteDefinition newSpriteDir;
+
+	while (pDir)
+	{
+		newSpriteDir.spriteBounds.clear();
+		if (!pDir->Attribute("name"))
+			std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE name" << std::endl;
+		
+		newSpriteDir.dirName = pDir->Attribute("name");
+
+		pSprite = pDir->FirstChildElement("spr");
+
+		std::string name;
+		while (pSprite)
+		{
+
+			name = pSprite->Attribute("name");
+			if (pSprite->QueryIntAttribute("x", &spriteBounds.left) != tinyxml2::XMLError::XML_SUCCESS)
+				std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE x" << std::endl;
+			if (pSprite->QueryIntAttribute("y", &spriteBounds.top) != tinyxml2::XMLError::XML_SUCCESS)
+				std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE y" << std::endl;
+			if (pSprite->QueryIntAttribute("w", &spriteBounds.width) != tinyxml2::XMLError::XML_SUCCESS)
+				std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE w" << std::endl;
+			if (pSprite->QueryIntAttribute("h", &spriteBounds.height) != tinyxml2::XMLError::XML_SUCCESS)
+				std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE h" << std::endl;
+			newSpriteDir.spriteBounds[name] = spriteBounds;
+			pSprite = pSprite->NextSiblingElement("spr");
+		}
+		m_spriteDefinitions[newSpriteDir.dirName] = newSpriteDir;
+		pDir = pDir->NextSiblingElement("dir");
+	}
+}
+
+void IHero::LoadAnimationFile()
+{
+	std::string filename = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationPath", "hero");
+
+	tinyxml2::XMLDocument animationFile;
+	if (animationFile.LoadFile(filename.c_str()) != tinyxml2::XMLError::XML_SUCCESS)
+		std::cout << "ERROR LOADING" << filename << std::endl;
+
+	tinyxml2::XMLElement* pAnimations = animationFile.FirstChildElement("animations");
+	tinyxml2::XMLElement* pAnim = pAnimations->FirstChildElement("anim");
+	tinyxml2::XMLElement* pCell;
+	tinyxml2::XMLElement* pSprite;
+	Animation::Animation newAnimation;
+	Animation::Frame newFrame;
+	Animation::Sprite newSprite;
+	std::string trash;
+	std::vector<std::string> trashVec;
+
+	while (pAnim)
+	{
+		newAnimation.frames.clear();
+		if (!pAnim->Attribute("name"))
+			std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE name" << std::endl;
+		newAnimation.name = pAnim->Attribute("name");
+		if (pAnim->QueryIntAttribute("loops", &newAnimation.loops) != tinyxml2::XMLError::XML_SUCCESS)
+			std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE loops" << std::endl;
+		pCell = pAnim->FirstChildElement("cell");
+		while (pCell)
+		{
+			newFrame.sprites.clear();
+			if (pCell->QueryIntAttribute("delay", &newFrame.maxDelay) != tinyxml2::XMLError::XML_SUCCESS)
+				std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE delay" << std::endl;
+
+			pSprite = pCell->FirstChildElement("spr");
+			while (pSprite)
+			{
+				if (pSprite->QueryIntAttribute("x", &newSprite.x) != tinyxml2::XMLError::XML_SUCCESS)
+					std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE x" << std::endl;
+				if (pSprite->QueryIntAttribute("y", &newSprite.y) != tinyxml2::XMLError::XML_SUCCESS)
+					std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE y" << std::endl;
+				if (pSprite->QueryIntAttribute("z", &newSprite.z) != tinyxml2::XMLError::XML_SUCCESS)
+					std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE z" << std::endl;
+				if (!pSprite->Attribute("name"))
+					std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE name" << std::endl;
+				trash = pSprite->Attribute("name");
+
+				//Seperate directory from index
+				trash.erase(trash.begin(), trash.begin() + 1);
+				SplitString(trash, trashVec, '/');
+				newSprite.spriteDir = trashVec[0];
+				newSprite.spriteName = trashVec[1].c_str();
+
+				newFrame.sprites.push_back(newSprite);
+				pSprite = pSprite->NextSiblingElement("spr");
+			}
+			newAnimation.frames.push_back(newFrame);
+			pCell = pCell->NextSiblingElement("cell");
+		}
+		m_animations[newAnimation.name] = newAnimation;
+		pAnim = pAnim->NextSiblingElement("anim");
+	}
+}
+
+void IHero::UpdateAnimation()
+{
+	std::string animName;
+
+	if (m_direction == 0)
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveRight");
+	else if (m_direction == M_PI_2)
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveDown");
+	else if (m_direction == M_PI)
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveLeft");
+	else if (m_direction == M_PI_2 * 3)
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveUp");
+	else
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveRight");
+
+	if (animName.empty())
+		return;
+
+	m_currentAnimation = m_animations[animName];
+
+	Animation::Frame currentFrame = m_currentAnimation.frames[m_currentAnimation.GetCurrentFrameIndex()];
+	sf::IntRect currentBounds = m_spriteDefinitions[currentFrame.sprites[0].spriteDir].spriteBounds[currentFrame.sprites[0].spriteName];
+
+	m_sprite.setTextureRect(currentBounds);
 }

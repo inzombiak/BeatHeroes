@@ -113,5 +113,8 @@
     <ClInclude Include="TinyXML2\tinyxml2.h">
       <Filter>Header Files\TiledLoader</Filter>
     </ClInclude>
+    <ClInclude Include="AnimationData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

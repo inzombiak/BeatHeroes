@@ -23,6 +23,8 @@ end
 
 function Hopper:Init()
 	self._attackPattern[1] = {0, 0}
+	self._animPath = "Images/Enemies/Hopper/Hopper_Anim.anim"
+	self._currAnimName = "idle"
 end
 
 function Hopper:Update()
