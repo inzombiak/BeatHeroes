@@ -167,7 +167,7 @@ public:
 
 	ClassLuaFunction(ClassLuaFunction&& other)
 		: m_function(other.m_function),
-		m_name(other.m_name),
+		m_funcName(other.m_funcName),
 		m_luaState(other.m_luaState),
 		m_objName(other.m_objName)
 	{
@@ -232,7 +232,7 @@ public:
 
 	ClassLuaFunction(ClassLuaFunction&& other)
 		: m_function(other.m_function),
-		m_name(other.m_name),
+		m_funcName(other.m_funcName),
 		m_luaState(other.m_luaState),
 		m_objName(other.m_objName)
 	{

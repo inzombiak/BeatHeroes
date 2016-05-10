@@ -135,7 +135,7 @@ void Game::Draw()
 	if (m_gameState == GameState::Paused)
 		return;
 
-	m_renderWindow.clear();
+	m_renderWindow.clear(sf::Color::Red);
 	
 	m_levelManager.Draw(m_renderWindow);
 

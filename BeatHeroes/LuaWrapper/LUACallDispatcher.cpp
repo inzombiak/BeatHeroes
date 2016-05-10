@@ -8,7 +8,7 @@ LuaCallDispatcher::LuaCallDispatcher()
 
 LuaCallDispatcher::~LuaCallDispatcher()
 {
-	printf("FUCK OFF");
+
 }
 
 
