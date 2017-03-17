@@ -1,22 +1,16 @@
 #include "GridItem.h"
-#include <SFML\Window.hpp>
 
 GridItem::GridItem(int x, int y, int w, int h, sf::Sprite sprite) : m_sprite(sprite)
 {
+    m_sprite = sprite;
 	m_cell.setOutlineThickness(1);
 	m_cell.setSize(sf::Vector2f((float)w, (float)h));
 	m_cell.setPosition((float)x, (float)y);
 	m_cell.setFillColor(sf::Color::Transparent);
-
 	m_sprite.setPosition((float)x, (float)y);
 }
 
-GridItem::~GridItem()
-{
-
-}
-
-void GridItem::Draw(sf::RenderWindow& rw) 
+void GridItem::Draw(sf::RenderWindow& rw)
 {
 	rw.draw(m_sprite);
 	//if (m_hero)
@@ -30,9 +24,14 @@ void GridItem::Draw(sf::RenderWindow& rw)
 	//}
 
 }
-
 void GridItem::DrawCell(sf::Color color, sf::RenderWindow& rw)
 {
 	SetColor(color);
 	rw.draw(m_cell);
 }
+
+GridItem::~GridItem()
+{
+
+}
+

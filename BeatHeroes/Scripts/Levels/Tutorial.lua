@@ -13,7 +13,7 @@ Tutorial =
 	_heroY = 5,
 	_enemies = {},
 	_beatPause = 0.5,
-	_beatBuffer = 0.1,
+	_beatBuffer = 0.2,
 }
 
 Tutorial.__index = Tutorial

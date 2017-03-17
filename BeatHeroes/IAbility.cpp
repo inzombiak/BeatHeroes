@@ -1,6 +1,6 @@
 #include "IAbility.h"
 
-#include "LuaWrapper\LuaWrapper.h"
+#include "LuaWrapper/LuaWrapper.h"
 
 IAbility::IAbility(const unsigned int id, const std::string& filepath)
 {
@@ -35,10 +35,11 @@ bool IAbility::Use(std::vector<std::pair<int, int>>& result)
 	LuaWrapper::GetInstance().CleanStack();
 
 	result = LuaWrapper::GetInstance().TableToVector<int, int>(m_filePath + std::to_string(m_id), "path");
-	if (result.size() < 0)
+    
+	if (result.size() == 0)
 		return false;
-	else
-		return true;
+    
+    return true;
 }
 
 int IAbility::GetCooldown() const

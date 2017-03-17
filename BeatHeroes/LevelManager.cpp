@@ -1,7 +1,7 @@
 #include "LevelManager.h"
 #include "IHero.h"
 
-#include "LuaWrapper\LUAWrapper.h"
+#include "LuaWrapper/LUAWrapper.h"
 
 LevelManager::LevelManager()
 {
@@ -21,42 +21,48 @@ void LevelManager::LoadLevel(const std::string& level)
 		delete m_hero;
 		m_hero = 0;
 	}
+    
 
 	LuaWrapper::GetInstance().LoadScript("Level", level);
 
-	m_columns = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetColumns", "thisLevel");
-	m_rows = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetRows", "thisLevel");
-
-	m_hero = new IHero(1, "Scripts/Heroes/Warrior Hero/WarriorHero.lua");
-
-	int heroY = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetHeroY", "thisLevel");
-	int heroX = LuaWrapper::GetInstance().RunFunction<int>("Level", "GetHeroX", "thisLevel");
-
-	m_hero->SetPos(std::pair<int, int>(heroX, heroY));
+	m_columns = LuaWrapper::GetInstance().RunFunction<int>("Level", FuncNameInfo("GetColumns", "thisLevel"));
+	m_rows = LuaWrapper::GetInstance().RunFunction<int>("Level", FuncNameInfo("GetRows", "thisLevel"));
+    
+    int heroY = LuaWrapper::GetInstance().RunFunction<int>("Level", FuncNameInfo("GetHeroY", "thisLevel"));
+    int heroX = LuaWrapper::GetInstance().RunFunction<int>("Level", FuncNameInfo("GetHeroX", "thisLevel"));
+    
+    m_enemyManager.m_tempOffsetX = m_tempOffsetX;
+    m_enemyManager.m_tempOffsetY = m_tempOffsetY;
 	m_enemyManager.Init("Level", "_enemies", "thisLevel");
-	m_enemyManager.SetWorldBounds(std::pair<int, int>(m_columns, m_rows));
+	
 
-	m_beatPause = LuaWrapper::GetInstance().RunFunction<double>("Level", "GetBeatPause", "thisLevel");
-	m_beatBuffer = LuaWrapper::GetInstance().RunFunction<double>("Level", "GetBeatBuffer", "thisLevel");
-	m_tmxPath = LuaWrapper::GetInstance().RunFunction<std::string>("Level", "GetTmxPath", "thisLevel");
+	m_beatPause = LuaWrapper::GetInstance().RunFunction<double>("Level", FuncNameInfo("GetBeatPause", "thisLevel"));
+	m_beatBuffer = LuaWrapper::GetInstance().RunFunction<double>("Level", FuncNameInfo("GetBeatBuffer", "thisLevel"));
+	m_tmxPath = LuaWrapper::GetInstance().RunFunction<std::string>("Level", FuncNameInfo("GetTmxPath", "thisLevel"));
 
-	LoadTmx();
+    LoadTmx();
+    
+    m_enemyManager.SetWorldBounds(std::pair<int, int>(m_columns, m_rows));
+    m_enemyManager.SetLevelCollisionBodies(m_collisionBodies);
+    m_hero = new IHero(1, "Scripts/Heroes/Warrior Hero/WarriorHero.lua");
+   // m_hero->m_tempOffsetX = m_tempOffsetX;
+   // m_hero->m_tempOffsetY = m_tempOffsetY;
+
+    m_hero->SetPos(std::pair<int, int>(heroX, heroY));
 }
 
 void LevelManager::UpdateRender()
 {
-	m_hero->UpdateRender(); 
+	m_hero->UpdateRender();
 	m_enemyManager.UpdateRender();
 }
 
 void LevelManager::Update()
 {
-	m_enemyManager.Update();
+    m_enemyManager.Update();
 	m_hero->Update();
-
 	ProcessUpdate();
 }
-
 void LevelManager::Draw(sf::RenderWindow& rw)
 {
 	for (int i = 0; i < m_rows; ++i)
@@ -80,7 +86,7 @@ void LevelManager::Draw(sf::RenderWindow& rw)
 
 void LevelManager::LoadTmx()
 {
-	tinyxml2::XMLError error = m_xmlDoc.LoadFile(m_tmxPath.c_str());
+	m_xmlDoc.LoadFile(m_tmxPath.c_str());
 
 	tinyxml2::XMLNode* pRoot = m_xmlDoc.FirstChildElement("map");
 	tinyxml2::XMLElement* pMapParam = pRoot->ToElement();
@@ -89,7 +95,9 @@ void LevelManager::LoadTmx()
 	pMapParam->QueryAttribute("height", &m_rows);
 	pMapParam->QueryAttribute("tileheight", &m_tileHeight);
 	pMapParam->QueryAttribute("tilewidth", &m_tileWidth);
-
+    
+    m_collisionBodies.resize(m_columns, std::vector<bool>(m_rows ,false));
+    
 	pMapParam = pRoot->FirstChildElement("tileset");
 	tinyxml2::XMLElement* pTilesetParam = pMapParam->FirstChildElement("image");
 	std::string tileSetPath = pTilesetParam->Attribute("source");
@@ -97,43 +105,105 @@ void LevelManager::LoadTmx()
 	pTilesetParam->QueryAttribute("height", &m_textureHeight);
 
 	tileSetPath.erase(0, 3);
-
-	m_levelTileSet.loadFromFile(tileSetPath);
-
+	m_levelTileSet.loadFromFile(tileSetPath.c_str());
+    
+	auto size = m_levelTileSet.getSize();
+	auto width = size.x;
+    std::cout << width << std::endl;
 	tinyxml2::XMLElement* pLayer = pRoot->FirstChildElement("layer");
-	tinyxml2::XMLElement* pData = pLayer->FirstChildElement("data");
-	tinyxml2::XMLElement* pTile = pData->FirstChildElement("tile");
 
+    
 	int worldIndex = 0;
 	int tileIndex;
 	m_gridItems.resize(m_rows);
 	GridItem* temp;
 	sf::Sprite gridSprite;
+    int zPos = -2;
 	int x, y;
-	for (int i = 0; i < m_rows; ++i)
-	{
-		m_gridItems.push_back(std::vector<GridItem*>());
-		m_gridItems[i].resize(m_columns);
-		y = i*m_tileHeight;
-		for (int j = 0; j < m_columns; ++j)
-		{
-			pTile->QueryAttribute("gid", &tileIndex);
-			worldIndex++;
-			x = j * m_tileWidth;
-			gridSprite = CreateGridSprite(tileIndex, worldIndex);
-			temp = new GridItem(x, y, m_tileWidth, m_tileHeight, gridSprite);
-			if (i == m_hero->GetPos().second && j == m_hero->GetPos().first)
-			{
-				temp->AddHero(m_hero);
-				temp->SetColor(sf::Color::Green);
-			}
+    while(pLayer)
+    {
+        tinyxml2::XMLElement* pData = pLayer->FirstChildElement("data");
+        tinyxml2::XMLElement* pTile = pData->FirstChildElement("tile");
+        for (int i = 0; i < m_rows; ++i)
+        {
+            m_gridItems.push_back(std::vector<GridItem*>());
+            m_gridItems[i].resize(m_columns);
+            y =  m_tempOffsetY + i*m_tileHeight;
+            for (int j = 0; j < m_columns; ++j)
+            {
+                pTile->QueryAttribute("gid", &tileIndex);
+                if(tileIndex == 0)
+                {
+                    pTile = pTile->NextSiblingElement("tile");
+                    continue;
 
-			m_gridItems[i][j] = temp;
+                }
+                
+                worldIndex++;
+                x =  m_tempOffsetX + j * m_tileWidth;
+                gridSprite = CreateGridSprite(tileIndex, worldIndex);
+               
+                temp = new GridItem(x, y, m_tileWidth, m_tileHeight, gridSprite);
+                m_gridItems[i][j] = temp;
+                pTile = pTile->NextSiblingElement("tile");
 
-			pTile = pTile->NextSiblingElement("tile");
-		}
-	}
+            }
+        }
+        zPos++;
+        pLayer = pLayer->NextSiblingElement("layer");
+    }
+    tinyxml2::XMLElement* pCollRoot = pRoot->FirstChildElement("objectgroup");
+    std::string collLayerName = "Collisions";
+    if(collLayerName.compare(pCollRoot->Attribute("name")) == 0)
+        CreateCollisionBodies(pCollRoot);
+}
 
+void LevelManager::CreateCollisionBodies(tinyxml2::XMLElement *pCollisionRoot)
+{
+    tinyxml2::XMLElement* pObj = pCollisionRoot->FirstChildElement("object");
+    int column, row, firstRow, x, y, width, height, numTilesSpannedX, numTilesSpannedY;
+    sf::RectangleShape spr;
+	sf::IntRect rect;
+    
+    while(pObj)
+    {
+        pObj->QueryAttribute("x", &x);
+        pObj->QueryAttribute("y", &y);
+        pObj->QueryAttribute("width", &width);
+        pObj->QueryAttribute("height", &height);
+        numTilesSpannedX = width/m_tileWidth;
+        numTilesSpannedY = height/m_tileHeight;
+        std::cout <<"ID: " << pObj->Attribute("id") << std::endl;
+        firstRow = row = y/m_tileHeight;
+        column = x/m_tileWidth;
+        
+        for(unsigned int i = 0; i < numTilesSpannedX; ++i)
+        {
+            row = firstRow;
+            for(unsigned int j = 0;  j < numTilesSpannedY; ++j)
+            {
+                m_collisionBodies[column][row] = true;
+                row++;
+            }
+            
+            column++;
+        }
+        //x = 600;
+      //  y = 200;
+		rect.left = m_tempOffsetX + x - m_tileHeight / 2;
+        rect.top = m_tempOffsetY - y - height + m_tileWidth/2;
+        rect.width = width;
+        rect.height = height;
+        
+		spr.setSize(sf::Vector2f(rect.width, rect.height));
+		sf::Color color = sf::Color::Magenta;
+		color.a = 0.3;
+		spr.setFillColor(color);
+
+        
+        pObj = pObj->NextSiblingElement();
+    }
+    
 }
 
 sf::Sprite LevelManager::CreateGridSprite(int tileIndex, int worldIndex)
@@ -181,24 +251,23 @@ void LevelManager::ProcessUpdate()
 	for (int i = 0; i < m_rows; ++i)
 		for (int j = 0; j < m_columns; ++j)
 			m_gridItems[i][j]->Update();
-
+    
 	m_drawData.clear();
 
 	CellData cellD;
 	auto enemyD = m_enemyManager.GetEnemyData();
 	auto heroPos = m_hero->GetPos();
 
-
 	for (unsigned int j = 0; j < m_playerAttackInfo.pattern.size(); ++j)
 	{
-		m_playerAttackInfo.pattern[j].first += heroPos.first;
-		m_playerAttackInfo.pattern[j].second += heroPos.second;
 		
-		cellD.row = m_playerAttackInfo.pattern[j].second;
-		cellD.column = m_playerAttackInfo.pattern[j].first;
+		cellD.row = m_playerAttackInfo.pattern[j].second + heroPos.second;
+		cellD.column = m_playerAttackInfo.pattern[j].first + heroPos.first;
 		cellD.R = 0;
 		cellD.G = 255;
 		cellD.B = 0;
+     
+        
 		m_drawData.push_back(cellD);
 	}
 
@@ -209,8 +278,9 @@ void LevelManager::ProcessUpdate()
 		cellD.R = 255;
 		cellD.G = 255;
 		cellD.B = 0;
+        
 		m_drawData.push_back(cellD);
-
+        
 		for (unsigned int k = 0; k < enemyD[i].pattern.size(); ++k)
 		{
 			cellD.row = enemyD[i].pos.second + enemyD[i].pattern[k].second;
@@ -218,29 +288,36 @@ void LevelManager::ProcessUpdate()
 			cellD.R = 255;
 			cellD.G = 0;
 			cellD.B = 0;
-			m_drawData.push_back(cellD);
-		}
-
-		for (unsigned int j = 0; j < m_playerAttackInfo.pattern.size(); ++j)
-		{
-			if (enemyD[i].pos == m_playerAttackInfo.pattern[j])
+            
+			for (unsigned int k = 0; k < enemyD[i].pattern.size(); ++k)
 			{
-				m_enemyManager.SetEnemyHP(enemyD[i].index, enemyD[i].hp - m_playerAttackInfo.damage);
+				cellD.row = enemyD[i].pos.second + enemyD[i].pattern[k].second;
+				cellD.column = enemyD[i].pos.first + enemyD[i].pattern[k].first;
+				cellD.R = 255;
+				cellD.G = 0;
+				cellD.B = 0;
+				m_drawData.push_back(cellD);
 			}
 		}
+
+//		for (unsigned int j = 0; j < m_playerAttackInfo.pattern.size(); ++j)
+//		{
+//			if (enemyD[i].pos == m_playerAttackInfo.pattern[j])
+//			{
+//				m_enemyManager.SetEnemyHP(enemyD[i].index, enemyD[i].hp - m_playerAttackInfo.damage);
+//			}
+//		}
 	}
 
-
 	m_playerAttackInfo.damage = 0;
-	m_playerAttackInfo.pattern.clear();
 }
 
-void LevelManager::UseAbility(bool isTap, double angle)
+void LevelManager::UseAbility(bool isTap, double angle, bool sglScreenControls)
 {
 	if (isTap)
-		m_playerAttackInfo = m_hero->Tap();
+		m_playerAttackInfo = m_hero->Tap(angle, sglScreenControls);
 	else
-		m_playerAttackInfo = m_hero->DoubleTap();
+		m_playerAttackInfo = m_hero->DoubleTap(angle, sglScreenControls);
 }
 
 void LevelManager::RotateHero(double angle) const
@@ -253,16 +330,10 @@ void LevelManager::MoveHero(double direction) const
 	auto oldPos = m_hero->GetPos();
 	auto newPos = m_hero->Move(direction);
 
-	if (newPos.first < 0 || newPos.first >= m_columns || newPos.second <= 0 || newPos.second > m_rows)
+	if (newPos.first < 0 || newPos.first >= m_columns || newPos.second <= 0 || newPos.second > m_rows || m_collisionBodies[newPos.first][newPos.second])
 	{
 		m_hero->SetPos(oldPos);
 		return;
 	}
-
-	m_gridItems[oldPos.second][oldPos.first]->RemoveHero();
-	m_gridItems[oldPos.second][oldPos.first]->SetColor(sf::Color::White);
-
-	m_gridItems[newPos.second][newPos.first]->AddHero(m_hero);
-	m_gridItems[newPos.second][newPos.first]->SetColor(sf::Color::Green);
 
 }

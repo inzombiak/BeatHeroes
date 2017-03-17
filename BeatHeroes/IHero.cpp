@@ -5,8 +5,8 @@
 #include "IHero.h"
 #include "IAbility.h"
 
-#include "LuaWrapper\LuaWrapper.h"
-#include "TinyXML2\tinyxml2.h"
+#include "LuaWrapper/LuaWrapper.h"
+#include "TinyXML2/tinyxml2.h"
 
 
 IHero::IHero(unsigned int id, std::string filepath)
@@ -15,15 +15,32 @@ IHero::IHero(unsigned int id, std::string filepath)
 	m_filePath = filepath;
 	
 	LuaWrapper::GetInstance().LoadScript(filepath + std::to_string(id), m_filePath);
-	m_sglClickAb = new IAbility(1, LuaWrapper::GetInstance().RunFunction<std::string>(filepath + std::to_string(id), "GetSglClickPath", "hero"));
-	m_dblClickAb = new IAbility(2, LuaWrapper::GetInstance().RunFunction<std::string>(filepath + std::to_string(id), "GetDblClickPath", "hero"));
+	m_sglClickAb = new IAbility(1, LuaWrapper::GetInstance().RunFunction<std::string>(filepath + std::to_string(id), FuncNameInfo("GetSglClickPath", "hero")));
+	m_dblClickAb = new IAbility(2, LuaWrapper::GetInstance().RunFunction<std::string>(filepath + std::to_string(id), FuncNameInfo("GetDblClickPath", "hero")));
 
 	LoadSpriteSheet();
 	LoadAnimationFile();
 
 	m_sprite.setTexture(m_spriteSheet);
 	UpdateAnimation();
-	m_sprite.setPosition((float)m_pos.first*32, (float)m_pos.second*32);
+    
+//    auto ssW = m_spriteSheet.size.width;
+//    auto ssH = m_spriteSheet.size.height;
+//    double margin = 0.3;
+//    
+//    NSString *tspNS = [NSString stringWithCString:"Images/Entities/Hero/Hero.png"
+//                                         encoding:[NSString defaultCStringEncoding]];
+//    UIImage *img = [UIImage imageWithContentsOfFile:tspNS];
+//    auto priteSheet = [SKTexture textureWithImage:img];
+//    double marginX = (double)32/96;
+//    double marginY = 0.25;
+    //auto texRect = CGRectMake(0, marginY, marginX, marginY)
+
+
+    //m_texRect = CGRectMake(0, 2*margin, margin, margin);
+   // m_sprite = [SKSpriteNode spriteNodeWithTexture: m_spriteSheet];//[SKTexture textureWithRect:m_texRect inTexture:m_spriteSheet]];
+    //m_sprite = [SKSpriteNode spriteNodeWithImageNamed:@"Spaceship"];
+	m_sprite.setPosition((float)m_pos.first * 32, (float)m_pos.second * 32);
 }
 
 
@@ -66,9 +83,9 @@ void IHero::UpdateRender()
 	{
 		m_currentAnimation.NextFrame();
 
-		Animation::Frame currentFrame = m_currentAnimation.frames[m_currentAnimation.GetCurrentFrameIndex()];
-		sf::IntRect currentBounds = m_spriteDefinitions[currentFrame.sprites[0].spriteDir].spriteBounds[currentFrame.sprites[0].spriteName];
-		m_sprite.setTextureRect(currentBounds);
+        Animation::Frame currentFrame = m_currentAnimation.frames[m_currentAnimation.GetCurrentFrameIndex()];
+        sf::IntRect currentBounds = m_spriteDefinitions[currentFrame.sprites[0].spriteDir].spriteBounds[currentFrame.sprites[0].spriteName];
+        //UpdateSKSprite(currentBounds);
 		m_counter = 0;
 	}
 }
@@ -78,14 +95,16 @@ void IHero::Draw(sf::RenderWindow& rw)
 	rw.draw(m_sprite);
 }
 
-AbilityInfo IHero::Tap()
+AbilityInfo IHero::Tap(double angle, bool useOwnDirection)
 {
+    angle = m_direction;
+    
 	AbilityInfo result;
 
 	m_sglClickAb->Use(result.pattern);
 
-	double angleSin = std::sin(m_direction);
-	double angleCos = std::cos(m_direction);
+	double angleSin = std::sin(angle);
+	double angleCos = std::cos(angle);
 
 	if (std::abs(angleCos) < 0.001)
 		angleCos = 0;
@@ -104,14 +123,17 @@ AbilityInfo IHero::Tap()
 	return result;
 }
 
-AbilityInfo IHero::DoubleTap()
+AbilityInfo IHero::DoubleTap(double angle, bool useOwnDirection)
 {
+    if(useOwnDirection)
+        angle = m_direction;
+    
 	AbilityInfo result;
 
 	m_dblClickAb->Use(result.pattern);
 
-	double angleSin = std::sin(m_direction);
-	double angleCos = std::cos(m_direction);
+	double angleSin = std::sin(angle);
+	double angleCos = std::cos(angle);
 
 	if (std::abs(angleCos) < 0.001)
 		angleCos = 0;
@@ -143,8 +165,8 @@ std::pair<int, int> IHero::Move(double direction)
 	m_pos.second += sin;
 
 	m_direction = clampedAngle;
-	m_sprite.setPosition((float)m_pos.first * 32, (float)m_pos.second * 32);
 
+	m_sprite.setPosition((float)m_pos.first * 32, (float)m_pos.second * 32);
 	UpdateAnimation();
 
 	return m_pos;
@@ -155,13 +177,15 @@ void IHero::Rotate(double angle)
 	m_direction = std::round((m_direction + angle) / M_PI_2) * M_PI_2;
 	if (m_direction >= 2 * M_PI)
 		m_direction -= 2 * M_PI;
+    if (m_direction < 0)
+        m_direction += 2 * M_PI;
 	UpdateAnimation();
 }
 
 void IHero::LoadSpriteSheet()
 {
 
-	std::string filename = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetSpritesheetPath", "hero");
+	std::string filename = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), FuncNameInfo("GetSpritesheetPath", "hero"));
 
 	tinyxml2::XMLDocument spriteFile;
 	if (spriteFile.LoadFile(filename.c_str()) != tinyxml2::XMLError::XML_SUCCESS)
@@ -169,7 +193,9 @@ void IHero::LoadSpriteSheet()
 
 	tinyxml2::XMLElement* pImg = spriteFile.FirstChildElement("img");
 	std::string textureName = pImg->Attribute("name");
-	m_spriteSheet.loadFromFile("Images/Entities/Hero/" + textureName);
+    textureName = "Images/Entities/Hero/" + textureName;
+	m_spriteSheet.loadFromFile(textureName);
+    
 	tinyxml2::XMLElement* pDefs = pImg->FirstChildElement("definitions");
 	tinyxml2::XMLElement* pBaseDir = pDefs->FirstChildElement("dir");
 	tinyxml2::XMLElement* pDir = pBaseDir->FirstChildElement("dir");
@@ -210,7 +236,7 @@ void IHero::LoadSpriteSheet()
 
 void IHero::LoadAnimationFile()
 {
-	std::string filename = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationPath", "hero");
+	std::string filename = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), FuncNameInfo("GetAnimationPath", "hero"));
 
 	tinyxml2::XMLDocument animationFile;
 	if (animationFile.LoadFile(filename.c_str()) != tinyxml2::XMLError::XML_SUCCESS)
@@ -276,15 +302,15 @@ void IHero::UpdateAnimation()
 	std::string animName;
 
 	if (m_direction == 0)
-		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveRight");
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), FuncNameInfo("GetAnimationNameByMsg", "hero"), "MoveRight");
 	else if (m_direction == M_PI_2)
-		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveDown");
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), FuncNameInfo("GetAnimationNameByMsg", "hero"), "MoveDown");
 	else if (m_direction == M_PI)
-		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveLeft");
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), FuncNameInfo("GetAnimationNameByMsg", "hero"), "MoveLeft");
 	else if (m_direction == M_PI_2 * 3)
-		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveUp");
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), FuncNameInfo("GetAnimationNameByMsg", "hero"), "MoveUp");
 	else
-		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), "GetAnimationNameByMsg", "hero", "MoveRight");
+		animName = LuaWrapper::GetInstance().RunFunction<std::string>(m_filePath + std::to_string(m_id), FuncNameInfo("GetAnimationNameByMsg", "hero"), "MoveRight");
 
 	if (animName.empty())
 		return;
@@ -296,3 +322,16 @@ void IHero::UpdateAnimation()
 
 	m_sprite.setTextureRect(currentBounds);
 }
+//
+//void IHero::UpdateSKSprite(Animation::IntRect currentBounds)
+//{
+//    double tx = currentBounds.left / m_spriteSheet.size.width;
+//    double ty = 1 - (currentBounds.top + currentBounds.height) / m_spriteSheet.size.height;
+//    double tw = currentBounds.width / m_spriteSheet.size.width;
+//    double th = currentBounds.height / m_spriteSheet.size.height;
+//    
+//    m_texRect = CGRectMake(tx, ty, tw, th);
+//   // m_texRect = CGRectMake(currentBounds.left/m_tileWidth * m_textureMarginX, (m_spriteSheet.size.height - currentBounds.top)/m_tileHeight * m_textureMarginY - m_textureMarginY, currentBounds.width/m_tileWidth * m_textureMarginX, currentBounds.height/m_tileHeight * m_textureMarginY);
+//    m_sprite.texture = [SKTexture textureWithRect:m_texRect inTexture:m_spriteSheet];
+//
+//}

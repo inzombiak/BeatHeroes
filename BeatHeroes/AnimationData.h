@@ -1,11 +1,11 @@
 #ifndef ANIMATION_DATA_H
 #define ANIMATION_DATA_H
 
+#include <SFML\Graphics.hpp>
 #include <iostream>
 #include <vector>
 #include <string>
 #include <map>
-#include "SFML\Graphics.hpp"
 
 //Based on GCC4 implementation
 inline void SplitString(const std::string& str, std::vector<std::string>& targetVec, char delimeter)
@@ -54,6 +54,7 @@ inline std::string ConvertRelativePathToStatic(const std::string& filePath, cons
 //Taken from RPGEngine
 namespace Animation
 {
+    
 	//Contains the bounds for all the frames of the animation that shares its name with dirName
 	//NOTE: SHOULD SPRITE JUST BE REPlACED WITH THIS??
 	struct SpriteDefinition

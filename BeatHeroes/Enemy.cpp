@@ -1,12 +1,19 @@
 #include "Enemy.h"
 
-#include "TinyXML2\tinyxml2.h"
-#include "LuaWrapper\LuaWrapper.h"
-#include "LuaWrapper\LUAObject.h"
+#include "SFML\Graphics.hpp"
 
-Enemy::Enemy(unsigned int id, std::shared_ptr<LuaObject> obj, sf::Texture& tex) : m_spriteSheet(tex)
+#include "TinyXML2/tinyxml2.h"
+#include "LuaWrapper/LuaWrapper.h"
+#include "LuaWrapper/LUAObject.h"
+
+#include "glm/glm.hpp"
+
+Enemy::Enemy(unsigned int id, std::shared_ptr<LuaObject> obj, sf::Texture&  tex) : m_spriteSheet(tex)
 {
-	Init(id, obj);
+    m_luaObj = obj;
+    m_health = GetHealth();
+    m_id = id;
+
 }
 
 Enemy::~Enemy()
@@ -15,17 +22,27 @@ Enemy::~Enemy()
 }
 
 
-void Enemy::Init(unsigned int id, std::shared_ptr<LuaObject> obj)
+void Enemy::Init()
 {
 	m_isAlive = true;
-	m_luaObj = obj;
-	m_health = GetHealth();
-	m_id = id;
+
 
 	LoadSpriteSheet();
 	LoadAnimationFile();
+    
+    m_sprites.reserve(m_maxSprites);
 
-	UpdateRender();
+    //
+    //for(unsigned int i = 0; i < m_maxSprites; ++i)
+    //{
+    //    newSpr = [SKSpriteNode spriteNodeWithColor:[UIColor blueColor] size:CGSizeMake(m_tileWidth, m_tileHeight)];
+    //    newSpr.zPosition = 3;
+    //    m_sprites.push_back(newSpr);
+    //    [scene addChild:newSpr];
+    //}
+    //
+    UpdateRender();
+
 }
 
 
@@ -34,7 +51,7 @@ void Enemy::Update()
 	if (!m_isAlive)
 		return;
 
-	m_luaObj->CallFunction("Update");
+	m_luaObj->CallFunction<void>("Update");
 
 }
 
@@ -60,18 +77,21 @@ void Enemy::UpdateRender()
 				m_sprites.push_back(newSpr);
 			}
 			auto pos = GetPos();
-			sf::Vector2f worldPos((float)pos.first * 32, (float)pos.second * 32);
-			worldPos += sf::Vector2f((float)currentFrame.sprites[i].x, (float)currentFrame.sprites[i].y);
-			m_sprites[i].setPosition(worldPos);
+            glm::vec2 worldPos((float)pos.first * 32, (float)pos.second * 32);
+            worldPos += glm::vec2((float)currentFrame.sprites[i].x, (float)currentFrame.sprites[i].y);
+            m_sprites[i].setPosition(m_tempOffsetX + worldPos.x, m_tempOffsetY + worldPos.y);
 			m_sprites[i].setTextureRect(currentBounds);
 			m_counter = 0;
 		}
+        
+        if(currentFrame.sprites.size() < m_sprites.size())
+        {
+            for (unsigned int i = currentFrame.sprites.size(); i < m_sprites.size(); ++i)
+            {
+               // m_sprites[i].hidden = true;
+            }
+        }
 	}
-}
-void Enemy::Draw(sf::RenderWindow& rw)
-{
-	for (unsigned int i = 0; i < m_sprites.size() && i < m_currentAnimation.frames[m_currentAnimation.GetCurrentFrameIndex()].sprites.size(); ++i)
-		rw.draw(m_sprites[i]);
 }
 
 void Enemy::Kill()
@@ -79,6 +99,12 @@ void Enemy::Kill()
 	m_isAlive = false;
 	m_luaObj = nullptr;
 	m_health = 0;
+}
+
+void Enemy::Draw(sf::RenderWindow& rw)
+{
+	for (unsigned int i = 0; i < m_sprites.size() && i < m_currentAnimation.frames[m_currentAnimation.GetCurrentFrameIndex()].sprites.size(); ++i)
+		rw.draw(m_sprites[i]);
 }
 
 void Enemy::LoadSpriteSheet()
@@ -163,7 +189,7 @@ void Enemy::LoadAnimationFile()
 	Animation::Sprite newSprite;
 	std::string trash;
 	std::vector<std::string> trashVec;
-
+    int currMax = 0;
 	while (pAnim)
 	{
 		newAnimation.frames.clear();
@@ -175,6 +201,7 @@ void Enemy::LoadAnimationFile()
 		pCell = pAnim->FirstChildElement("cell");
 		while (pCell)
 		{
+            currMax = 0;
 			newFrame.sprites.clear();
 			if (pCell->QueryIntAttribute("delay", &newFrame.maxDelay) != tinyxml2::XMLError::XML_SUCCESS)
 				std::cout << "ERROR PROCESSING" << filename << "NO ATTRIBUTE delay" << std::endl;
@@ -200,9 +227,13 @@ void Enemy::LoadAnimationFile()
 
 				newFrame.sprites.push_back(newSprite);
 				pSprite = pSprite->NextSiblingElement("spr");
+                currMax++;
+                
 			}
 			newAnimation.frames.push_back(newFrame);
 			pCell = pCell->NextSiblingElement("cell");
+            if(currMax > m_maxSprites)
+                m_maxSprites = currMax;
 		}
 		m_animations[newAnimation.name] = newAnimation;
 		pAnim = pAnim->NextSiblingElement("anim");
