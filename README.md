@@ -9,6 +9,6 @@ Click and drag player - move
 Click and drag in a circular way - rotate player
 Right-click - attack
 
-These controls may seem off, its because the game was aimed at iOS.
+These controls may seem off, its because the game was aimed at iOS(which can be found [here](https://github.com/inzombiak/BeatHeroes-iOS))
 
 A prototype for a beat-based game like "Crypt of the Necrodancer".
