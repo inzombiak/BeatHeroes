@@ -12,3 +12,10 @@ Right-click - attack
 These controls may seem off, its because the game was aimed at iOS(which can be found [here](https://github.com/inzombiak/BeatHeroes-iOS))
 
 A prototype for a beat-based game like "Crypt of the Necrodancer".
+
+All artwork is from OpenGameArt.org
+ * Tles - http://opengameart.org/content/rpg-tiles-cobble-stone-paths-town-objects
+ * Enemies - http://opengameart.org/content/dungeon-crawl-32x32-tiles
+ * Hero - cant find it
+ 
+Animations were create using [darkFunction Editor](http://darkfunction.com/editor/)
